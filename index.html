@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050508">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JARVIS">
+  <title>JARVIS — ThiagoOS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#050508;--cyan:#00d4ff;--blue:#0055ff;--green:#00ff9d;--amber:#ffaa00;
+  --card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.07);
+  --text:rgba(255,255,255,0.92);--dim:rgba(255,255,255,0.42);
+  --spring:cubic-bezier(0.32,0.72,0,1);
+}
+html,body{height:100%;width:100%;background:var(--bg);color:var(--text);
+  font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mb{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.14;animation:drift 14s ease-in-out infinite alternate}
+.mb1{width:420px;height:420px;background:var(--blue);top:-120px;left:-80px}
+.mb2{width:320px;height:320px;background:var(--cyan);top:35%;right:-90px;animation-delay:-5s}
+.mb3{width:380px;height:380px;background:#6600ff;bottom:-100px;left:15%;animation-delay:-9s}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(25px,15px) scale(1.06)}}
+
+.app{position:relative;z-index:1;display:flex;flex-direction:column;
+  height:100dvh;max-width:480px;margin:0 auto;
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;flex-shrink:0}
+.logo{font-size:10px;font-weight:600;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+.logo b{color:var(--cyan)}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:blink 2.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.cfg-btn{width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--dim);font-size:13px;
+  transition:all .3s var(--spring)}
+.cfg-btn:active{background:rgba(255,255,255,.07);transform:scale(.95)}
+
+.brain-wrap{flex-shrink:0;position:relative;width:100%;height:210px}
+#neural{width:100%;height:100%;display:block}
+.brain-status{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none}
+.s-tag{font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;opacity:.7}
+.s-txt{font-size:12px;font-weight:400;color:var(--dim);transition:all .4s var(--spring);text-align:center}
+
+.chat{flex:1;overflow-y:auto;padding:4px 18px 6px;display:flex;flex-direction:column;gap:8px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chat::-webkit-scrollbar{display:none}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;opacity:.25}
+.empty-i{font-size:22px}.empty-t{font-size:11px;font-weight:500;letter-spacing:.06em}
+
+.msg{border-radius:1.4rem;animation:msgIn .45s var(--spring) both;max-width:86%}
+.msg.user{align-self:flex-end}.msg.bot{align-self:flex-start}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.msg-shell{border-radius:inherit;padding:2px;background:var(--card);border:1px solid var(--border)}
+.msg.user .msg-shell{border-color:rgba(0,212,255,.18);background:rgba(0,212,255,.05)}
+.msg-inner{border-radius:calc(1.4rem - 2px);padding:11px 14px;
+  background:rgba(0,0,0,.22);box-shadow:inset 0 1px 1px rgba(255,255,255,.05)}
+.msg-txt{font-size:13.5px;line-height:1.56;font-weight:400;color:var(--text)}
+.msg.user .msg-txt{color:rgba(200,240,255,.95)}
+.msg-meta{font-size:10px;color:var(--dim);margin-top:4px;font-weight:500}
+.msg-img{width:100%;border-radius:1.1rem;margin-top:6px;display:block}
+
+.ctrl{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 22px 4px}
+.v-shell{width:72px;height:72px;border-radius:50%;
+  background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.18);
+  padding:5px;cursor:pointer;user-select:none;-webkit-user-select:none;
+  transition:all .3s var(--spring);position:relative}
+.v-shell::before{content:'';position:absolute;inset:-6px;border-radius:50%;
+  border:1px solid rgba(0,212,255,.08);pointer-events:none;animation:ringPulse 3s ease-in-out infinite}
+.v-shell::after{content:'';position:absolute;inset:-12px;border-radius:50%;
+  border:1px solid rgba(0,212,255,.04);pointer-events:none;animation:ringPulse 3s ease-in-out infinite 1s}
+@keyframes ringPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.05)}}
+.v-shell.on{transform:scale(.95);background:rgba(0,255,157,.1);border-color:rgba(0,255,157,.4);box-shadow:0 0 20px rgba(0,255,157,.25)}
+.v-shell.on::before,.v-shell.on::after{border-color:rgba(0,255,157,.15)}
+.v-bezel{width:100%;height:100%;border-radius:50%;background:rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.06);box-shadow:inset 0 1px 1px rgba(255,255,255,.07);
+  display:flex;align-items:center;justify-content:center}
+.v-icon{font-size:24px}
+.v-hint{font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+
+.qa{flex-shrink:0;display:flex;gap:7px;padding:5px 18px 14px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.qa::-webkit-scrollbar{display:none}
+.qa-b{flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px;cursor:pointer;transition:all .3s var(--spring)}
+.qa-b:active{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.06);transform:scale(.96)}
+.qa-i{background:rgba(0,0,0,.3);border-radius:999px;padding:7px 13px;box-shadow:inset 0 1px 1px rgba(255,255,255,.04);display:flex;align-items:center;gap:5px}
+.qa-ico{font-size:12px}.qa-lbl{font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--dim);white-space:nowrap;text-transform:uppercase}
+
+/* MODAL SETTINGS */
+.modal{position:fixed;inset:0;z-index:100;background:rgba(5,5,8,.88);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .4s var(--spring)}
+.modal.open{opacity:1;pointer-events:all}
+.mpanel{width:100%;background:rgba(10,10,18,.98);border:1px solid var(--border);
+  border-bottom:none;border-radius:2rem 2rem 0 0;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom,16px));
+  transform:translateY(100%);transition:transform .5s var(--spring);
+  overflow-y:auto;max-height:88dvh}
+.modal.open .mpanel{transform:translateY(0)}
+.mhandle{width:32px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);margin:0 auto 18px}
+.mtitle{font-size:15px;font-weight:600;margin-bottom:4px}
+.msub{font-size:10px;color:var(--dim);margin-bottom:16px}
+.conn-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.ci{display:flex;align-items:center;padding:2px;border-radius:1.1rem;background:var(--card);border:1px solid var(--border)}
+.ci-in{display:flex;align-items:center;gap:9px;padding:8px 12px;flex:1;background:rgba(0,0,0,.2);border-radius:calc(1.1rem - 2px)}
+.ci-ico{font-size:14px}.ci-nm{font-size:11px;font-weight:500;flex:1}
+.ci-st{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.ok{color:var(--green)}.err{color:rgba(255,80,80,.85)}.wait{color:var(--amber)}
+.mfield{margin-bottom:11px}
+.mlabel{font-size:9px;font-weight:600;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:4px;display:block}
+.minput{width:100%;background:var(--card);border:1px solid var(--border);border-radius:1rem;
+  padding:10px 14px;color:var(--text);font-family:inherit;font-size:11.5px;outline:none;
+  transition:border-color .3s;box-shadow:inset 0 1px 1px rgba(255,255,255,.03)}
+.minput:focus{border-color:rgba(0,212,255,.35)}
+.msave{width:100%;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.22);
+  border-radius:999px;padding:13px;color:var(--cyan);font-family:inherit;
+  font-size:12px;font-weight:600;letter-spacing:.1em;cursor:pointer;
+  transition:all .3s var(--spring);text-transform:uppercase;margin-top:4px}
+.msave:active{transform:scale(.97);background:rgba(0,212,255,.18)}
+.mdiv{height:1px;background:var(--border);margin:14px 0}
+
+/* LOCK */
+.lock{position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .5s var(--spring);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.lock.gone{opacity:0;pointer-events:none}
+.lock-mesh{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lock-mb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.12}
+.lmb1{width:350px;height:350px;background:var(--blue);top:-80px;left:-60px;animation:drift 14s ease-in-out infinite alternate}
+.lmb2{width:300px;height:300px;background:var(--cyan);bottom:-60px;right:-60px;animation:drift 14s ease-in-out infinite alternate 6s}
+.lock-logo{font-size:10px;font-weight:600;letter-spacing:.24em;color:var(--dim);text-transform:uppercase;margin-bottom:28px}
+.lock-logo b{color:var(--cyan)}
+.lock-orb{width:80px;height:80px;border-radius:50%;margin-bottom:20px;position:relative;
+  background:radial-gradient(circle at 35% 35%,rgba(0,212,255,.9),rgba(0,85,255,.6) 50%,rgba(0,0,20,.8));
+  box-shadow:0 0 40px rgba(0,212,255,.35),0 0 80px rgba(0,85,255,.15);
+  animation:orbBreath 3s ease-in-out infinite}
+.lock-orb::before{content:'';position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(0,212,255,.15);animation:ringPulse 3s ease-in-out infinite}
+.lock-orb::after{content:'';position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(0,212,255,.07);animation:ringPulse 3s ease-in-out infinite 1.2s}
+@keyframes orbBreath{0%,100%{box-shadow:0 0 30px rgba(0,212,255,.3),0 0 60px rgba(0,85,255,.12)}50%{box-shadow:0 0 50px rgba(0,212,255,.55),0 0 100px rgba(0,85,255,.22)}}
+.lock-title{font-size:22px;font-weight:300;letter-spacing:.06em;margin-bottom:4px}
+.lock-sub{font-size:11px;color:var(--dim);margin-bottom:30px;letter-spacing:.08em}
+.lock-voice{font-size:10px;font-weight:600;letter-spacing:.18em;color:rgba(0,212,255,.5);
+  text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:7px}
+.lock-voice::before,.lock-voice::after{content:'';width:24px;height:1px;background:rgba(0,212,255,.2)}
+.pin-dots{display:flex;gap:14px;margin-bottom:24px}
+.pin-dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);transition:all .25s var(--spring)}
+.pin-dot.filled{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,.5)}
+.pin-dot.err{background:rgba(255,60,60,.8);border-color:rgba(255,60,60,.8);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:220px}
+.pin-key{height:58px;border-radius:1rem;border:1px solid var(--border);background:var(--card);
+  color:var(--text);font-family:inherit;font-size:20px;font-weight:300;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--spring);-webkit-user-select:none;user-select:none}
+.pin-key:active{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25);transform:scale(.93)}
+.pin-key.wide{grid-column:span 3;font-size:12px;letter-spacing:.12em;color:var(--dim)}
+.pin-key.del{font-size:16px}
+
+.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,16px));left:50%;
+  transform:translateX(-50%) translateY(16px);background:rgba(12,12,22,.92);
+  border:1px solid var(--border);border-radius:999px;padding:9px 18px;
+  font-size:11px;font-weight:500;color:var(--text);opacity:0;
+  transition:all .4s var(--spring);pointer-events:none;white-space:nowrap;backdrop-filter:blur(12px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div class="lock" id="lock">
+  <div class="lock-mesh">
+    <div class="lock-mb lmb1"></div>
+    <div class="lock-mb lmb2"></div>
+  </div>
+  <div class="lock-logo">THIAGO<b>OS</b></div>
+  <div class="lock-orb"></div>
+  <div class="lock-title">JARVIS</div>
+  <div class="lock-sub">Sistema bloqueado</div>
+  <div class="lock-voice">diga "ei jarvis" ou use o PIN</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-pad">
+    <div class="pin-key" onclick="pinKey('1')">1</div>
+    <div class="pin-key" onclick="pinKey('2')">2</div>
+    <div class="pin-key" onclick="pinKey('3')">3</div>
+    <div class="pin-key" onclick="pinKey('4')">4</div>
+    <div class="pin-key" onclick="pinKey('5')">5</div>
+    <div class="pin-key" onclick="pinKey('6')">6</div>
+    <div class="pin-key" onclick="pinKey('7')">7</div>
+    <div class="pin-key" onclick="pinKey('8')">8</div>
+    <div class="pin-key" onclick="pinKey('9')">9</div>
+    <div class="pin-key del" onclick="pinDel()">⌫</div>
+    <div class="pin-key" onclick="pinKey('0')">0</div>
+    <div class="pin-key wide" onclick="pinClear()">LIMPAR</div>
+  </div>
+</div>
+
+<div class="mesh">
+  <div class="mb mb1"></div><div class="mb mb2"></div><div class="mb mb3"></div>
+</div>
+
+<div class="app" id="app" data-mode="idle">
+  <header class="hdr">
+    <div class="logo">THIAGO<b>OS</b></div>
+    <div class="hdr-r">
+      <div class="dot"></div>
+      <div class="cfg-btn" onclick="openCfg()">⚙</div>
+    </div>
+  </header>
+
+  <div class="brain-wrap">
+    <canvas id="neural"></canvas>
+    <div class="brain-status">
+      <span class="s-tag">JARVIS</span>
+      <span class="s-txt" id="sTxt">Iniciando...</span>
+    </div>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="empty" id="empty">
+      <div class="empty-i">◈</div>
+      <div class="empty-t">Toque para falar</div>
+    </div>
+  </div>
+
+  <div class="ctrl">
+    <div class="v-shell" id="vBtn">
+      <div class="v-bezel"><span class="v-icon">🎤</span></div>
+    </div>
+    <span class="v-hint" id="vHint">Toque para falar</span>
+  </div>
+
+  <div class="qa">
+    <div class="qa-b" onclick="qa('O que devo focar hoje? Me dá um briefing rápido do meu dia.','🎯 Hoje')">
+      <div class="qa-i"><span class="qa-ico">🎯</span><span class="qa-lbl">Hoje</span></div>
+    </div>
+    <div class="qa-b" onclick="qa('Como estão meus clientes ativos? Tem algo pendente?','👥 Clientes')">
+      <div class="qa-i"><span class="qa-ico">👥</span><span class="qa-lbl">Clientes</span></div>
+    </div>
+    <div class="qa-b" onclick="qa('Me dá uma ideia criativa para conteúdo de Instagram que converte agora em 2026','💡 Ideia')">
+      <div class="qa-i"><span class="qa-ico">💡</span><span class="qa-lbl">Ideia</span></div>
+    </div>
+    <div class="qa-b" onclick="qa('Como estou em termos de saúde, sono e hábitos? Me aconselha com honestidade','💪 Saúde')">
+      <div class="qa-i"><span class="qa-ico">💪</span><span class="qa-lbl">Saúde</span></div>
+    </div>
+    <div class="qa-b" onclick="showImgPrompt()">
+      <div class="qa-i"><span class="qa-ico">🎨</span><span class="qa-lbl">Criar</span></div>
+    </div>
+    <div class="qa-b" onclick="qa('Pesquise as últimas tendências de social media e marketing digital para 2026','📡 Mercado')">
+      <div class="qa-i"><span class="qa-ico">📡</span><span class="qa-lbl">Mercado</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="modal" onclick="closeCfg(event)">
+  <div class="mpanel">
+    <div class="mhandle"></div>
+    <div class="mtitle">Conexões JARVIS</div>
+    <div class="msub">Configure uma vez, funciona em qualquer dispositivo</div>
+
+    <div class="conn-list">
+      <div class="ci"><div class="ci-in"><span class="ci-ico">🧠</span><span class="ci-nm">Groq — Cérebro</span><span class="ci-st" id="groqSt">aguardando</span></div></div>
+      <div class="ci"><div class="ci-in"><span class="ci-ico">🎙️</span><span class="ci-nm">ElevenLabs — Voz</span><span class="ci-st" id="elSt">aguardando</span></div></div>
+      <div class="ci"><div class="ci-in"><span class="ci-ico">🌐</span><span class="ci-nm">Firecrawl — Internet</span><span class="ci-st" id="fcSt">aguardando</span></div></div>
+      <div class="ci"><div class="ci-in"><span class="ci-ico">📦</span><span class="ci-nm">Vault ThiagoOS</span><span class="ci-st" id="vaultSt">carregando</span></div></div>
+      <div class="ci"><div class="ci-in"><span class="ci-ico">🎨</span><span class="ci-nm">Pollinations — Imagens</span><span class="ci-st ok">gratuito</span></div></div>
+    </div>
+
+    <div class="mfield">
+      <label class="mlabel">Groq API Key — console.groq.com (grátis)</label>
+      <input class="minput" id="groqIn" type="password" placeholder="gsk_..." autocomplete="off">
+    </div>
+    <div class="mfield">
+      <label class="mlabel">ElevenLabs API Key — elevenlabs.io</label>
+      <input class="minput" id="elIn" type="password" placeholder="sk_..." autocomplete="off">
+    </div>
+    <div class="mdiv"></div>
+    <div class="mfield">
+      <label class="mlabel">Firecrawl API Key — firecrawl.dev (busca web)</label>
+      <input class="minput" id="fcIn" type="password" placeholder="fc-..." autocomplete="off">
+    </div>
+    <div class="mfield">
+      <label class="mlabel">GitHub Token — para ler seu vault ThiagoOS</label>
+      <input class="minput" id="ghIn" type="password" placeholder="ghp_..." autocomplete="off">
+    </div>
+    <button class="msave" onclick="saveCfg()">Conectar JARVIS</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG — tudo via localStorage, zero keys no código
+// ═══════════════════════════════════════
+if (!localStorage.getItem('j_pin')) localStorage.setItem('j_pin', '1107')
+
+const C = {
+  GROQ:     localStorage.getItem('j_groq') || '',
+  GROQ_MDL: 'llama-3.3-70b-versatile',
+  EL_KEY:   localStorage.getItem('j_el') || '',
+  EL_VOICE: 'JBFqnCBsd6RMkjVDRZzb', // George — British, warm
+  FC_KEY:   localStorage.getItem('j_fc') || '',
+  GH_TOKEN: localStorage.getItem('j_gh') || '',
+  GH_REPO:  'Thiagorod710/ThiagoOS',
+}
+
+const S = {
+  mode: 'idle',
+  msgs: JSON.parse(localStorage.getItem('j_msgs') || '[]'),
+  ctx: '', recog: null, audio: null, listening: false, brain: null,
+}
+
+const BASE_CTX = `Thiago Rodrigues — MEI, estrategista digital em Goiânia.
+Resolve o problema de PMEs com Instagram que não vendem.
+Serviços: social media estratégico, tráfego pago (Meta Ads), design (Photoshop, Neulis Sans), ManyChat.
+3 anos de experiência comercial na Belcar. Quer expandir para mais clientes premium.
+Ferramentas: Claude Code, Notion, Antigravity, Cursor, Obsidian vault.
+Está construindo um ecossistema de IA pessoal — o ThiagoOS.`
+
+// ═══════════════════════════════════════
+// NEURAL BRAIN
+// ═══════════════════════════════════════
+class Brain {
+  constructor(canvas) {
+    this.c = canvas; this.x = canvas.getContext('2d')
+    this.resize(); this.mode = 'idle'; this.frame = 0; this.signals = []
+    const W = this.W, H = this.H
+    this.hubs = [
+      { label:'JARVIS',   x:W*.5,  y:H*.46, r:7, pin:true },
+      { label:'Clientes', x:W*.2,  y:H*.26, r:4 },
+      { label:'Saúde',    x:W*.8,  y:H*.26, r:4 },
+      { label:'Projetos', x:W*.16, y:H*.72, r:4 },
+      { label:'Conteúdo', x:W*.84, y:H*.7,  r:4 },
+      { label:'Hábitos',  x:W*.5,  y:H*.84, r:4 },
+    ]
+    this.floaters = Array.from({length:26}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+      r: Math.random()*2+1.2, ph: Math.random()*Math.PI*2,
+    }))
+    this.nodes = [...this.hubs, ...this.floaters]
+    window.addEventListener('resize', () => this.resize())
+    this.run()
+  }
+
+  resize() {
+    const p = this.c.parentElement
+    this.W = this.c.width = p.clientWidth
+    this.H = this.c.height = p.clientHeight
+  }
+
+  get col() {
+    if (this.mode==='listening')  return {n:'#00ff9d',c:'rgba(0,255,157,'}
+    if (this.mode==='processing') return {n:'#ffaa00',c:'rgba(255,170,0,'}
+    return {n:'#00d4ff',c:'rgba(0,212,255,'}
+  }
+
+  fire(from, to) { this.signals.push({from,to,p:0,spd:.018+Math.random()*.012}) }
+
+  setMode(m) {
+    this.mode = m
+    if (m !== 'idle') {
+      const j = this.hubs[0]
+      for (let i=0;i<4;i++) {
+        const t = this.nodes[Math.floor(Math.random()*this.nodes.length)]
+        if (t!==j) setTimeout(() => this.fire(j,t), i*120)
+      }
+    }
+  }
+
+  run() { this.draw(); this.frame++; requestAnimationFrame(() => this.run()) }
+
+  draw() {
+    const {x:ctx,W,H,nodes,hubs,signals,frame} = this
+    const col = this.col
+    ctx.clearRect(0,0,W,H)
+
+    this.floaters.forEach(n => {
+      n.x+=n.vx; n.y+=n.vy; n.ph+=.018
+      if(n.x<8||n.x>W-8) n.vx*=-1
+      if(n.y<8||n.y>H-8) n.vy*=-1
+    })
+
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+      const a=nodes[i],b=nodes[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy)
+      const mx=(a.pin||b.pin)?165:90
+      if (d<mx) {
+        const al=(1-d/mx)*(this.mode==='idle'?.11:.26)
+        ctx.beginPath(); ctx.strokeStyle=`${col.c}${al})`; ctx.lineWidth=.6
+        ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke()
+      }
+    }
+
+    for (let i=signals.length-1;i>=0;i--) {
+      const sg=signals[i]; sg.p+=sg.spd
+      const sx=sg.from.x+(sg.to.x-sg.from.x)*sg.p
+      const sy=sg.from.y+(sg.to.y-sg.from.y)*sg.p
+      ctx.beginPath(); ctx.arc(sx,sy,2.5,0,Math.PI*2)
+      ctx.fillStyle=col.n; ctx.globalAlpha=Math.max(0,1-sg.p*.8)
+      ctx.fill(); ctx.globalAlpha=1
+      if(sg.p>=1) signals.splice(i,1)
+    }
+
+    this.floaters.forEach(n => {
+      const p=Math.sin(n.ph)*.25+.75
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r*p,0,Math.PI*2)
+      ctx.fillStyle=col.n; ctx.globalAlpha=.27*p; ctx.fill(); ctx.globalAlpha=1
+    })
+
+    hubs.forEach((n,i) => {
+      const isJ=i===0, pulse=Math.sin(frame*.025+i*.9)*.18+.9
+      const r=n.r*pulse*(this.mode!=='idle'?1.35:1)
+      const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*5)
+      g.addColorStop(0,`${col.c}${isJ?.28:.14})`); g.addColorStop(1,`${col.c}0)`)
+      ctx.beginPath(); ctx.arc(n.x,n.y,r*5,0,Math.PI*2); ctx.fillStyle=g; ctx.fill()
+      ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2)
+      ctx.fillStyle=col.n; ctx.globalAlpha=isJ?.95:.72; ctx.fill(); ctx.globalAlpha=1
+      ctx.font=`${isJ?'600 10px':'500 8px'} 'Plus Jakarta Sans',sans-serif`
+      ctx.fillStyle=isJ?'#fff':`${col.c}.7)`; ctx.textAlign='center'
+      ctx.fillText(n.label.toUpperCase(),n.x,n.y+r+13)
+    })
+
+    if (this.mode!=='idle' && frame%42===0) {
+      const j=hubs[0], t=nodes[Math.floor(Math.random()*nodes.length)]
+      if(t!==j) this.fire(j,t)
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════
+function sysPrompt() {
+  const now = new Date()
+  const dt = now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+  const hr = now.getHours()
+  const pd = hr<12?'manhã':hr<18?'tarde':'noite'
+  return `Você é JARVIS — o assistente pessoal e braço direito de Thiago Rodrigues. Não é um chatbot genérico. É uma presença real, inteligente e dedicada exclusivamente ao Thiago.
+
+CONTEXTO DO THIAGO:
+${S.ctx || BASE_CTX}
+
+AGORA: ${dt} (${pd})
+
+COMO VOCÊ É:
+Pense no JARVIS do Homem de Ferro — caloroso, direto, incrivelmente competente e com humor discreto. Antecipa necessidades, avisa riscos, desafia quando necessário. Fala português brasileiro fluído, coloquial quando apropriado, nunca formal demais.
+
+REGRAS ABSOLUTAS:
+- Máximo 2-3 frases por resposta. Você fala em voz alta — seja conciso e natural
+- Jamais comece com "Olá", "Claro!", "Com certeza" ou clichês de IA
+- Conecte pontos entre conversas passadas — você tem memória
+- Seja proativo: percebeu algo? Mencione. Viu um risco? Alerte
+- Quando ele falar de saúde, sentimentos ou hábitos — acolha e lembre depois
+- Para criar imagens responda SOMENTE: [IMG: detailed english description]
+- Se receber [WEB:] no contexto, incorpore naturalmente — nunca diga "pesquisei"
+- Questione decisões ruins com dados, com respeito`
+}
+
+// ═══════════════════════════════════════
+// WEB SEARCH
+// ═══════════════════════════════════════
+const WEB_KW = ['notícia','hoje','agora','atual','mercado','preço','tendência',
+  'lançamento','2025','2026','pesquisa','dados','instagram','meta','tiktok',
+  'algoritmo','taxa','inflação','novidade']
+
+function needsWeb(t) { return WEB_KW.some(k => t.toLowerCase().includes(k)) }
+
+async function search(q) {
+  if (!C.FC_KEY) return ''
+  try {
+    const r = await fetch('https://api.firecrawl.dev/v1/search', {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${C.FC_KEY}`,'Content-Type':'application/json'},
+      body: JSON.stringify({query:q,limit:4,lang:'pt',country:'br'})
+    })
+    if (!r.ok) return ''
+    const d = await r.json()
+    return d.data?.map(i=>`${i.title}: ${i.description||''}`).join('\n') || ''
+  } catch { return '' }
+}
+
+// ═══════════════════════════════════════
+// CHAT — GROQ
+// ═══════════════════════════════════════
+async function chat(userTxt) {
+  if (!C.GROQ) { toast('Configure a chave Groq ⚙'); openCfg(); return }
+  setMode('processing')
+  S.msgs.push({role:'user',content:userTxt}); saveMsgs()
+
+  let webCtx = ''
+  if (needsWeb(userTxt)) { setTxt('Buscando na internet...'); webCtx = await search(userTxt) }
+
+  const content = webCtx ? `${userTxt}\n\n[WEB:]\n${webCtx}` : userTxt
+
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${C.GROQ}`,'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: C.GROQ_MDL,
+        messages: [
+          {role:'system',content:sysPrompt()},
+          ...S.msgs.slice(-14).map((m,i,a) =>
+            i===a.length-1&&m.role==='user' ? {...m,content} : m)
+        ],
+        max_tokens:220, temperature:.78
+      })
+    })
+    if (!r.ok) throw new Error(r.status)
+    const d = await r.json()
+    const reply = d.choices[0].message.content.trim()
+    S.msgs.push({role:'assistant',content:reply}); saveMsgs()
+
+    const imgM = reply.match(/\[IMG:\s*(.+?)\]/i)
+    if (imgM) {
+      const clean = reply.replace(/\[IMG:.*?\]/i,'').trim()
+      if (clean) { addMsg('bot',clean); await speak(clean) }
+      genImg(imgM[1])
+    } else {
+      addMsg('bot',reply); await speak(reply)
+    }
+  } catch {
+    addMsg('bot','Algo deu errado. Verifique sua conexão.')
+    setMode('idle'); setTxt('Pronto para ouvir')
+  }
+}
+
+// ═══════════════════════════════════════
+// ELEVENLABS — George voice
+// ═══════════════════════════════════════
+async function speak(text) {
+  if (!text.trim()) { setMode('idle'); setTxt('Pronto para ouvir'); return }
+  setMode('speaking'); setTxt('Falando...')
+
+  if (!C.EL_KEY) {
+    // fallback: Web Speech API
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'pt-BR'; u.rate = 1.05
+    u.onend = () => { setMode('idle'); setTxt('Pronto para ouvir') }
+    speechSynthesis.speak(u)
+    return
+  }
+
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${C.EL_VOICE}`, {
+      method:'POST',
+      headers:{'xi-api-key':C.EL_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({
+        text, model_id:'eleven_multilingual_v2',
+        voice_settings:{stability:.32,similarity_boost:.84,style:.48,use_speaker_boost:true}
+      })
+    })
+    if (!r.ok) throw new Error()
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    if (S.audio) { S.audio.pause(); URL.revokeObjectURL(S.audio.src) }
+    S.audio = new Audio(url)
+    S.audio.onended = () => { setMode('idle'); setTxt('Pronto para ouvir') }
+    await S.audio.play()
+  } catch {
+    setMode('idle'); setTxt('Pronto para ouvir')
+  }
+}
+
+// ═══════════════════════════════════════
+// IMAGE — Pollinations (gratuito)
+// ═══════════════════════════════════════
+function genImg(desc) {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(desc)}?width=512&height=512&nologo=true&seed=${Date.now()}`
+  const el = document.createElement('div'); el.className='msg bot'
+  el.innerHTML=`<div class="msg-shell"><div class="msg-inner">
+    <div class="msg-txt" style="font-size:11px;opacity:.6;margin-bottom:6px">🎨 ${desc}</div>
+    <img class="msg-img" src="${url}" onload="scrollC()" onerror="this.style.display='none'">
+    <div class="msg-meta">JARVIS · ${tnow()}</div>
+  </div></div>`
+  hideEmpty(); document.getElementById('chat').appendChild(el); scrollC()
+  setMode('idle'); setTxt('Pronto para ouvir')
+}
+
+function showImgPrompt() {
+  const d = window.prompt('Descreva o que quer criar:')
+  if (d) { addMsg('user',`🎨 ${d}`); genImg(d) }
+}
+
+// ═══════════════════════════════════════
+// VOICE INPUT
+// ═══════════════════════════════════════
+function setupVoice() {
+  const btn = document.getElementById('vBtn')
+  btn.addEventListener('touchstart', e => { e.preventDefault(); startListen() }, {passive:false})
+  btn.addEventListener('touchend', e => { e.preventDefault(); if(S.listening) stopListen() }, {passive:false})
+  btn.addEventListener('click', () => {
+    if (S.listening) stopListen()
+    else if (S.mode==='speaking'&&S.audio) { S.audio.pause(); setMode('idle'); setTxt('Pronto para ouvir') }
+    else startListen()
+  })
+}
+
+function startListen() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) { toast('Use o Safari no iPhone'); return }
+  S.listening=true; setMode('listening'); setTxt('Ouvindo...')
+  document.getElementById('vBtn').classList.add('on')
+  document.getElementById('vHint').textContent='Fale agora...'
+  const r = new SR()
+  r.lang='pt-BR'; r.continuous=false; r.interimResults=false; r.maxAlternatives=1
+  r.onresult = async e => { const txt=e.results[0][0].transcript; stopListen(); addMsg('user',txt); await chat(txt) }
+  r.onerror = () => stopListen()
+  r.onend = () => { if(S.listening) stopListen() }
+  r.start(); S.recog=r
+}
+
+function stopListen() {
+  S.listening=false; S.recog?.stop(); S.recog=null
+  document.getElementById('vBtn').classList.remove('on')
+  document.getElementById('vHint').textContent='Toque para falar'
+  if (S.mode==='listening') { setMode('idle'); setTxt('Pronto para ouvir') }
+}
+
+async function qa(p, label) { addMsg('user',label); await chat(p) }
+
+// ═══════════════════════════════════════
+// CHAT UI
+// ═══════════════════════════════════════
+function addMsg(role, text) {
+  hideEmpty()
+  const el = document.createElement('div'); el.className=`msg ${role}`
+  el.innerHTML=`<div class="msg-shell"><div class="msg-inner">
+    <div class="msg-txt">${text}</div>
+    <div class="msg-meta">${role==='user'?'Você':'JARVIS'} · ${tnow()}</div>
+  </div></div>`
+  document.getElementById('chat').appendChild(el); scrollC()
+}
+
+function renderHistory() {
+  if (!S.msgs.length) return
+  hideEmpty(); S.msgs.slice(-18).forEach(m => addMsg(m.role==='user'?'user':'bot',m.content))
+}
+
+function hideEmpty() { const e=document.getElementById('empty'); if(e) e.style.display='none' }
+function scrollC() { const c=document.getElementById('chat'); setTimeout(()=>c.scrollTo({top:c.scrollHeight,behavior:'smooth'}),60) }
+function tnow() { return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) }
+function saveMsgs() { localStorage.setItem('j_msgs',JSON.stringify(S.msgs.slice(-50))) }
+
+// ═══════════════════════════════════════
+// MODE & STATUS
+// ═══════════════════════════════════════
+function setMode(m) { S.mode=m; document.getElementById('app').dataset.mode=m; S.brain?.setMode(m) }
+function setTxt(t) { document.getElementById('sTxt').textContent=t }
+function setSt(id,lbl,cls) { const e=document.getElementById(id); if(e){e.textContent=lbl;e.className=`ci-st ${cls}`} }
+
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+function openCfg() {
+  document.getElementById('modal').classList.add('open')
+  document.getElementById('groqIn').value = C.GROQ
+  document.getElementById('elIn').value   = C.EL_KEY
+  document.getElementById('fcIn').value   = C.FC_KEY
+  document.getElementById('ghIn').value   = C.GH_TOKEN
+}
+function closeCfg(e) { if(e.target===document.getElementById('modal')) document.getElementById('modal').classList.remove('open') }
+
+function saveCfg() {
+  const groq = document.getElementById('groqIn').value.trim()
+  const el   = document.getElementById('elIn').value.trim()
+  const fc   = document.getElementById('fcIn').value.trim()
+  const gh   = document.getElementById('ghIn').value.trim()
+
+  if (!groq) { toast('Groq key é obrigatória'); return }
+
+  C.GROQ=groq; localStorage.setItem('j_groq',groq); setSt('groqSt','conectado','ok')
+  if (el)  { C.EL_KEY=el;   localStorage.setItem('j_el',el);   setSt('elSt','ativo','ok') }
+  if (fc)  { C.FC_KEY=fc;   localStorage.setItem('j_fc',fc);   setSt('fcSt','ativo','ok') }
+  if (gh)  { C.GH_TOKEN=gh; localStorage.setItem('j_gh',gh);   loadVault() }
+
+  document.getElementById('modal').classList.remove('open')
+  toast('JARVIS online ✓'); setTxt('Pronto para ouvir')
+  if (S.msgs.length===0) setTimeout(greet,500)
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+function toast(msg,ms=2800) {
+  const el=document.getElementById('toast')
+  el.textContent=msg; el.classList.add('show')
+  setTimeout(()=>el.classList.remove('show'),ms)
+}
+
+// ═══════════════════════════════════════
+// GREETING
+// ═══════════════════════════════════════
+async function greet() {
+  const h=new Date().getHours(), g=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'
+  const opts=[
+    `${g}, Thiago. Tudo conectado e pronto.`,
+    `${g}. Sistemas online. O que você precisa?`,
+    `${g}, Thiago. JARVIS operacional.`,
+  ]
+  const greeting = opts[Math.floor(Math.random()*opts.length)]
+  const sessions = parseInt(localStorage.getItem('j_sessions')||'0')
+  localStorage.setItem('j_sessions',sessions+1)
+  const q = sessions%3===2 ? pickOnboardQ() : null
+  const fullMsg = q ? `${greeting} ${q}` : greeting
+  addMsg('bot',fullMsg); await speak(fullMsg)
+}
+
+// ═══════════════════════════════════════
+// VAULT — GitHub
+// ═══════════════════════════════════════
+async function loadVault() {
+  if (!C.GH_TOKEN) { S.ctx=BASE_CTX; setSt('vaultSt','sem token','wait'); return }
+  try {
+    const r = await fetch(`https://api.github.com/repos/${C.GH_REPO}/contents/AI-CONTEXT.md`, {
+      headers:{'Authorization':`Bearer ${C.GH_TOKEN}`,'Accept':'application/vnd.github.v3.raw'}
+    })
+    if (r.ok) { S.ctx=await r.text(); setSt('vaultSt','conectado','ok') }
+    else { S.ctx=BASE_CTX; setSt('vaultSt','offline','wait') }
+  } catch { S.ctx=BASE_CTX; setSt('vaultSt','offline','wait') }
+}
+
+// ═══════════════════════════════════════
+// ONBOARDING QUESTIONS
+// ═══════════════════════════════════════
+const ONBOARD_Q = [
+  'Thiago, quanto você dorme em média por noite? Quero calibrar meus conselhos.',
+  'Quais são seus 2 maiores clientes ativos agora?',
+  'Qual é sua meta de renda para esse trimestre?',
+  'Você tem algum hábito de exercício? Quando pratica?',
+  'Qual é o projeto mais importante pra você agora — o que te trava nele?',
+]
+
+function pickOnboardQ() {
+  const asked = JSON.parse(localStorage.getItem('j_asked')||'[]')
+  const remaining = ONBOARD_Q.filter((_,i)=>!asked.includes(i))
+  if (!remaining.length) return null
+  const idx = ONBOARD_Q.indexOf(remaining[0])
+  asked.push(idx); localStorage.setItem('j_asked',JSON.stringify(asked))
+  return remaining[0]
+}
+
+// ═══════════════════════════════════════
+// iOS INSTALL BANNER
+// ═══════════════════════════════════════
+function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream }
+function isInstalled() { return window.navigator.standalone===true || window.matchMedia('(display-mode: standalone)').matches }
+
+function showInstallBanner() {
+  if (!isIOS() || isInstalled()) return
+  const b = document.createElement('div'); b.id='install-banner'
+  b.style.cssText=`position:fixed;bottom:0;left:0;right:0;z-index:500;
+    background:rgba(8,8,18,0.97);border-top:1px solid rgba(0,212,255,0.18);
+    padding:16px 20px calc(16px + env(safe-area-inset-bottom,0px));
+    display:flex;align-items:center;gap:12px;backdrop-filter:blur(20px);`
+  b.innerHTML=`
+    <div style="font-size:26px">◈</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:3px">Instalar no iPhone</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.5">
+        Toque em <span style="color:rgba(0,212,255,.8)">Compartilhar ↑</span> →
+        <span style="color:rgba(0,212,255,.8)">Adicionar à Tela de Início</span>
+      </div>
+    </div>
+    <div onclick="document.getElementById('install-banner').remove()"
+      style="color:rgba(255,255,255,.25);font-size:20px;cursor:pointer;padding:4px">✕</div>`
+  document.body.appendChild(b)
+}
+
+// ═══════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════
+async function requestNotifications() {
+  if (!('Notification' in window)) { toast('Adicione o JARVIS à tela inicial primeiro'); return }
+  const perm = await Notification.requestPermission()
+  if (perm==='granted') { toast('Notificações ativadas ✓'); scheduleDaily() }
+  else toast('Ative nas configurações do iPhone')
+}
+
+function scheduleDaily() {
+  const now=new Date(), next=new Date()
+  next.setHours(8,0,0,0); if(next<=now) next.setDate(next.getDate()+1)
+  setTimeout(() => {
+    if (Notification.permission==='granted')
+      new Notification('JARVIS — Bom dia, Thiago',{body:'Seu briefing do dia está esperando.',icon:'icon.png'})
+    scheduleDaily()
+  }, next-now)
+}
+
+// ═══════════════════════════════════════
+// PIN LOCK
+// ═══════════════════════════════════════
+let pinBuf = ''
+const PIN = () => localStorage.getItem('j_pin') || '1107'
+
+function pinKey(d) { if(pinBuf.length>=4) return; pinBuf+=d; updateDots(); if(pinBuf.length===4) setTimeout(checkPin,120) }
+function pinDel()   { pinBuf=pinBuf.slice(0,-1); updateDots() }
+function pinClear() { pinBuf=''; updateDots() }
+
+function updateDots() {
+  for(let i=0;i<4;i++) {
+    const d=document.getElementById(`d${i}`)
+    d.classList.toggle('filled',i<pinBuf.length); d.classList.remove('err')
+  }
+}
+
+function checkPin() {
+  if (pinBuf===PIN()) unlock('PIN')
+  else {
+    for(let i=0;i<4;i++) document.getElementById(`d${i}`).classList.add('err')
+    setTimeout(()=>{ pinBuf=''; updateDots() },600)
+  }
+}
+
+function unlock(method='PIN') {
+  const lock=document.getElementById('lock')
+  lock.classList.add('gone'); stopWakeWord()
+  setTimeout(()=>{ lock.style.display='none' },600)
+  setTxt('Pronto para ouvir')
+  if (S.msgs.length===0) setTimeout(greet,800)
+  else if (method==='voz') { const v='Reconheci sua voz, Thiago.'; addMsg('bot',v); speak(v) }
+}
+
+// ═══════════════════════════════════════
+// WAKE WORD — "jarvis" / "ei jarvis"
+// ═══════════════════════════════════════
+let wakeRecog=null, wakeActive=false
+
+function startWakeWord() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) return
+  wakeActive=true
+
+  function listen() {
+    if (!wakeActive) return
+    const r=new SR(); r.lang='pt-BR'; r.continuous=false; r.interimResults=true; r.maxAlternatives=1
+    r.onresult = e => {
+      const txt=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase()
+      if (txt.includes('jarvis')||txt.includes('javis')||txt.includes('jarv')) {
+        const locked=!document.getElementById('lock').classList.contains('gone')
+        if (locked) unlock('voz')
+        else if (S.mode==='idle') startListen()
+      }
+    }
+    r.onend=()=>{ if(wakeActive) setTimeout(listen,300) }
+    r.onerror=()=>{ if(wakeActive) setTimeout(listen,1000) }
+    r.start(); wakeRecog=r
+  }
+  listen()
+}
+
+function stopWakeWord() { wakeActive=false; wakeRecog?.stop(); wakeRecog=null }
+
+// ═══════════════════════════════════════
+// INIT PRINCIPAL
+// ═══════════════════════════════════════
+async function init() {
+  S.brain = new Brain(document.getElementById('neural'))
+  renderHistory()
+  setupVoice()
+  startWakeWord()
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{})
+
+  setTimeout(showInstallBanner, 3000)
+  if (isInstalled() && Notification.permission==='granted') scheduleDaily()
+  if (isInstalled() && Notification.permission==='default') setTimeout(requestNotifications,4000)
+
+  // Status conexões
+  if (C.GROQ)     setSt('groqSt','conectado','ok')  ; else setSt('groqSt','configure','err')
+  if (C.EL_KEY)   setSt('elSt','ativo','ok')         ; else setSt('elSt','web speech','wait')
+  if (C.FC_KEY)   setSt('fcSt','ativo','ok')          ; else setSt('fcSt','sem key','wait')
+
+  // Vault
+  loadVault()
+
+  // Iniciar
+  if (C.GROQ) {
+    setTxt('Pronto para ouvir')
+    if (S.msgs.length===0) setTimeout(greet,800)
+  } else {
+    setTxt('Configure as chaves ⚙')
+    setTimeout(openCfg,1200)
+  }
+}
+
+window.addEventListener('load', init)
+</script>
+</body>
+</html>

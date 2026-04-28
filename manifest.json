@@ -1,0 +1,25 @@
+{
+  "name": "JARVIS — ThiagoOS",
+  "short_name": "JARVIS",
+  "description": "Seu assistente pessoal de IA",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050508",
+  "theme_color": "#050508",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "/icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Falar com JARVIS",
+      "short_name": "Falar",
+      "description": "Abre e ativa o microfone",
+      "url": "/?voice=1"
+    }
+  ],
+  "prefer_related_applications": false
+}
